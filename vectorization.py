@@ -10,7 +10,10 @@ import math
 from PIL import Image
 n = 17
 
-def fold2img(filename):
+def fold2matrix(filename,img=False):
+    """
+    Read a .fold file, make the connection matrix. if img, save the matrix as an image.
+    """
     # read the file name as json object
     with open(filename, 'r') as f:
         data = json.load(f)
@@ -51,32 +54,35 @@ def fold2img(filename):
     # print(connection_matrix.tolist())
 
     #turn the nxnx3 connection matrix into a png file
+    if img:
+        im = Image.fromarray(connection_matrix.astype(np.uint8),'RGB')
+        im.save('trainingData/'+filename.split('/')[1]+'.png')
 
-    im = Image.fromarray(connection_matrix.astype(np.uint8),'RGB')
-    im.save('trainingData/'+filename.split('/')[1]+'.png')
-    # plt.imshow(connection_matrix)
-    # plt.savefig('trainingData/'+filename.split('/')[1]+'.png')    
+    return connection_matrix    
+
+fold2matrix('trainingData/empty.fold')
+fold2matrix('trainingData/225bird_base.fold')
+fold2matrix('trainingData/225bird_frog_base.fold')
+fold2matrix('trainingData/225blintzed_bird_base.fold')
+fold2matrix('trainingData/225dragon.fold')
+fold2matrix('trainingData/225deerf.fold')
+fold2matrix('trainingData/225deerm.fold')
+fold2matrix('trainingData/bp_turtle.fold')
 
 
-fold2img('trainingData/empty.fold')
-fold2img('trainingData/225bird_base.fold')
-fold2img('trainingData/225bird_frog_base.fold')
-fold2img('trainingData/225blintzed_bird_base.fold')
-fold2img('trainingData/225dragon.fold')
-fold2img('trainingData/225deerf.fold')
-fold2img('trainingData/225deerm.fold')
-fold2img('trainingData/bp_turtle.fold')
-
-# test = np.zeros((5,5,3))
-# print(test.tolist())
-# test[0][0] = [255,0,0]
-# test[1][0] = [0,255,0]
-# test[2][0] = [0,0,255]
-# # test[0][2] = [0,255,255]
-# # test[1][2] = [255,0,255]
-# # test[2][2] = [255,255,0]
-# # test[3][3] = [255,255,255]
-# print(test.tolist())
-# im = Image.fromarray(test.astype(np.uint8),'RGB')
-# im.save('trainingData/test.png')
+def fold2vector(filename):
+    """
+    Read a .fold file, make the connection matrix, and flatten it into a vector. For now, M and V are both 1, anything else is 0.
+    """
+    connection_matrix = fold2matrix(filename)
+    vector = np.zeros((int(0.5*(n**2)*(n**2-1)),1))
+    for i in range(n**2):
+        for j in range(i):
+            if connection_matrix[i][j][0] or connection_matrix[i][j][2] :
+                # vector = np.vstack((vector,1))
+                vector[int(0.5*i*(i-1) + j)][0] = 1
+    print(sum(vector))
+    # print(vector.T.tolist())
+    return vector
+fold2vector('trainingData/bp_turtle.fold')
 
