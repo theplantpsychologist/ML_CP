@@ -12,12 +12,13 @@ class VAE(nn.Module):
         
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, 500),
-            nn.Sigmoid(),
+            # nn.Sigmoid(),
             nn.Linear(500, 300),
             nn.ReLU(),
             nn.Linear(300, 100),
-            nn.ReLU(),
-            nn.Linear(100, latent_dim * 2) # Two times latent_dim for mean and variance
+            nn.Sigmoid(),
+            nn.Linear(100, latent_dim * 2), # Two times latent_dim for mean and variance
+            nn.Sigmoid()
         )
 
         self.decoder = nn.Sequential(
@@ -26,7 +27,7 @@ class VAE(nn.Module):
             nn.Linear(100, 300),
             nn.ReLU(),
             nn.Linear(300, 500),
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Linear(500, input_dim),
             nn.Tanh()
         )
@@ -87,7 +88,7 @@ print(train_data.shape)
 # Define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 # Set the number of epochs
-num_epochs = 100
+num_epochs = 70
 # Set the batch size
 batch_size = 128
 # Create a data loader
@@ -102,11 +103,12 @@ for epoch in range(num_epochs):
         x_hat, z_mean, z_log_var = model(x)
         # Compute the reconstruction loss
         reconstruction_loss = nn.MSELoss()(x_hat, x)
-
+        # Compute the negative log likelihood loss
+        nll_loss = torch.mean(0.5 * torch.sum((x - x_hat) ** 2, dim=1))
         # Compute the KL divergence loss
         kl_divergence_loss = -0.5 * torch.sum(1 + z_log_var - z_mean.pow(2) - z_log_var.exp())
         # Compute the total loss
-        total_loss = reconstruction_loss + kl_divergence_loss
+        total_loss = nll_loss + reconstruction_loss + kl_divergence_loss
         # Backward pass
         total_loss.backward()
         # Update the parameters
@@ -114,28 +116,40 @@ for epoch in range(num_epochs):
     # Print the loss for each epoch
     if epoch % 10 == 0:
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {round(total_loss.item(),8)}")
-#latent:{model.encoder(x).detach().numpy().T}
-#Reconstruction Loss: {round(reconstruction_loss.item(),4)}, KL Divergence Loss: {round(kl_divergence_loss.item(),4)}
+        with torch.no_grad():
+            x = train_data[0]  # Choose an input from the training data
+            latent_values = model.encoder(x.unsqueeze(0))
+            print(f"Latent Layer Values: {latent_values[:, :latent_dim].squeeze().tolist()}")
 
-# Generate a new output vector
-# output = model.decoder(torch.randn(1, latent_dim)).detach().numpy().T
+
 def generate_output(model, latent_dim,scale):
     # Generate random latent vector
-    z = torch.randn(1, latent_dim) * scale
+    z = torch.rand(1, latent_dim) * scale
     # Decode the latent vector
     output = model.decoder(z)
     return output
 
-# output0 = generate_output(model, latent_dim,1).detach().numpy().T
-# vec.fold2readable(vec.vector2fold(output0/max(output0),0.1),"test0.png")
+output00 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output00/max(output00),0.05),"test00.png")
 
-output1 = generate_output(model, latent_dim,0.1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output1/max(output1),0.12),"test1.png")
+output0 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output0/max(output0),0.1),"test0.png")
 
-output2 = generate_output(model, latent_dim,0.01).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output2/max(output2),0.14),"test2.png")
+output1 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output1/max(output1),0.2),"test1.png")
 
-output3 = generate_output(model, latent_dim,0.001).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output3/max(output3),0.16),"test3.png")
+output2 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output2/max(output2),0.3),"test2.png")
+
+output3 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output3/max(output3),0.4),"test3.png")
+
+output4 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output4/max(output4),0.5),"test4.png")
+
+output5 = generate_output(model, latent_dim,1).detach().numpy().T
+vec.fold2readable(vec.vector2fold(output4/max(output5),0.6),"test5.png")
 
 print("=======finished=======")
+
+#TODO: figure out how to set up NLL loss

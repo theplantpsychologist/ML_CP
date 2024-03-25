@@ -121,7 +121,7 @@ def vectorize(filename):
     concatenated_vector = np.concatenate(vector_copies, axis=1)
     return concatenated_vector
 
-def vector2fold(vector,threshold = 0.2,filename = None):
+def vector2fold(vector,threshold,filename = None):
     """
     Take a vector and convert it into a .fold file (json object). If fold is true, save the file as a .fold file.
     Threshold is the required confidence for us to call it a crease or not
@@ -175,8 +175,7 @@ def fold2readable(fold,filename):
             draw.line((v1[0]*scale,v1[1]*scale,v2[0]*scale,v2[1]*scale), fill=(0,0,255),width=2)
 
     im.save(filename)
-fold2readable(vector2fold(fold2vector('trainingData/bp_turtle.fold')), 'outputs/bp_turtle.png')
-fold2readable(vector2fold(fold2vector('trainingData/225dragon.fold')), 'outputs/225dragon.png')
+
 
 
 #vectorize: fold2vector
