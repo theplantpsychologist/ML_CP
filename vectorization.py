@@ -11,14 +11,18 @@ from PIL import Image, ImageDraw
 
 
 n = 17
+# read the file name as json object
+# with open('filename', 'r') as f:
+#     data = json.load(f)
 
-def fold2matrix(filename,img=False):
+#helper or use for image
+def fold2matrix(data,filename = None):
     """
-    Read a .fold file, make the connection matrix. if img, save the matrix as an image.
+    Read a .fold json file, make the connection matrix. if there's a filename, save the matrix as an image.
     """
-    # read the file name as json object
-    with open(filename, 'r') as f:
-        data = json.load(f)
+    if type(data) == str:
+        with open(data, 'r') as f:
+            data = json.load(f)
     # extract the vertices and edges
     vertices = data['vertices_coords']
     edges = data['edges_vertices']
@@ -56,18 +60,18 @@ def fold2matrix(filename,img=False):
     # print(connection_matrix.tolist())
 
     #turn the nxnx3 connection matrix into a png file
-    if img:
+    if filename:
         im = Image.fromarray(connection_matrix.astype(np.uint8),'RGB')
         im.save('trainingData/'+filename.split('/')[1]+'.png')
 
     return connection_matrix    
 
 
-def fold2vector(filename):
+def fold2vector(fold):
     """
     Read a .fold file, make the connection matrix, and flatten it into a vector. For now, M is 1, V is -1 (can use tanh activation functions)
     """
-    connection_matrix = fold2matrix(filename)
+    connection_matrix = fold2matrix(fold)
     vector = np.zeros((int(0.5*(n**2)*(n**2-1)),1))
     for i in range(n**2):
         for j in range(i):
@@ -79,18 +83,48 @@ def fold2vector(filename):
 
 #if more training data is necessary, you can reuse the existing data by reflecting/rotating/flipping mv for more variations.
 
-# fold2matrix('trainingData/empty.fold')
-# fold2matrix('trainingData/225bird_base.fold')
-# fold2matrix('trainingData/225bird_frog_base.fold')
-# fold2matrix('trainingData/225blintzed_bird_base.fold')
-# fold2matrix('trainingData/225dragon.fold')
-# fold2matrix('trainingData/225deerf.fold')
-# fold2matrix('trainingData/225deerm.fold')
-# fold2matrix('trainingData/bp_turtle.fold')
+def vectorize(filename):
+    """
+    Take a .fold file and convert it into a vector--but also, rotate and flip first to create more training data. return 8 vectors
+    """
+    with open(filename, 'r') as f:
+        fold = json.load(f) #dictionary object
+    fold_copies = [fold.copy() for _ in range(16)]
+    #copy 0 stays as is
+    for v in fold_copies[1]['vertices_coords']:
+        v[0] *= -1 #flip over y axis
+    for v in fold_copies[2]['vertices_coords']:
+        v[1] *= -1 #flip over x axis
+    for v in fold_copies[3]['vertices_coords']:
+        v[0] *= -1 
+        v[1] *= -1 #flip over y=-x
+    for v in fold_copies[4]['vertices_coords']:
+        v[0],v[1] = v[1],v[0] #flip over y=x
+    for v in fold_copies[5]['vertices_coords']:
+        v[0] *= -1
+        v[0],v[1] = v[1],v[0] #rotate 90 CW
+    for v in fold_copies[6]['vertices_coords']:
+        v[1] *= -1
+        v[0],v[1] = v[1],v[0] #rotate 90 CCW
+    for v in fold_copies[7]['vertices_coords']:
+        v[0] *= -1
+        v[1] *= -1
+        v[0],v[1] = v[1],v[0] #rotate 180
+    for copy in fold_copies[8:]:
+        for v in copy['edges_assignment']:
+            if v == 'M':
+                v = 'V'
+            elif v == 'V':
+                v = 'M'
+    
+    vector_copies = [fold2vector(fold) for fold in fold_copies]
+    concatenated_vector = np.concatenate(vector_copies, axis=1)
+    return concatenated_vector
 
-def vector2fold(vector,filename = None):
+def vector2fold(vector,threshold = 0.2,filename = None):
     """
     Take a vector and convert it into a .fold file (json object). If fold is true, save the file as a .fold file.
+    Threshold is the required confidence for us to call it a crease or not
     """
     vertices_coords = []
     for i in range(n**2):
@@ -99,10 +133,10 @@ def vector2fold(vector,filename = None):
     edges_assignment = []
     for i in range(n**2):
         for j in range(i):
-            if vector[int(0.5*i*(i-1) + j)][0] >0.5:
+            if vector[int(0.5*i*(i-1) + j)][0] >threshold:
                 edges_vertices.append([i,j])
                 edges_assignment.append('M')
-            elif vector[int(0.5*i*(i-1) + j)][0] <-0.5:
+            elif vector[int(0.5*i*(i-1) + j)][0] <-1*threshold:
                 edges_vertices.append([i,j])
                 edges_assignment.append('V')
     data = {'vertices_coords':vertices_coords,'edges_vertices':edges_vertices,'edges_assignment':edges_assignment}
@@ -121,6 +155,8 @@ def vector2fold(vector,filename = None):
 #         else:
 #             random[i][0] = -1
 # vector2fold(random,'outputs/random.fold')
+
+#TODO wiggler to fix flat foldability issues
 
 def fold2readable(fold,filename):
     """
@@ -141,4 +177,7 @@ def fold2readable(fold,filename):
     im.save(filename)
 fold2readable(vector2fold(fold2vector('trainingData/bp_turtle.fold')), 'outputs/bp_turtle.png')
 fold2readable(vector2fold(fold2vector('trainingData/225dragon.fold')), 'outputs/225dragon.png')
-    
+
+
+#vectorize: fold2vector
+#unvectorize: fold2readable(vector2fold(vector),filename)
