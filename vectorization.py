@@ -7,7 +7,9 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from PIL import Image
+from PIL import Image, ImageDraw
+
+
 n = 17
 
 def fold2matrix(filename,img=False):
@@ -60,29 +62,83 @@ def fold2matrix(filename,img=False):
 
     return connection_matrix    
 
-fold2matrix('trainingData/empty.fold')
-fold2matrix('trainingData/225bird_base.fold')
-fold2matrix('trainingData/225bird_frog_base.fold')
-fold2matrix('trainingData/225blintzed_bird_base.fold')
-fold2matrix('trainingData/225dragon.fold')
-fold2matrix('trainingData/225deerf.fold')
-fold2matrix('trainingData/225deerm.fold')
-fold2matrix('trainingData/bp_turtle.fold')
-
 
 def fold2vector(filename):
     """
-    Read a .fold file, make the connection matrix, and flatten it into a vector. For now, M and V are both 1, anything else is 0.
+    Read a .fold file, make the connection matrix, and flatten it into a vector. For now, M is 1, V is -1 (can use tanh activation functions)
     """
     connection_matrix = fold2matrix(filename)
     vector = np.zeros((int(0.5*(n**2)*(n**2-1)),1))
     for i in range(n**2):
         for j in range(i):
-            if connection_matrix[i][j][0] or connection_matrix[i][j][2] :
-                # vector = np.vstack((vector,1))
+            if connection_matrix[i][j][0]: #eventually we can use a range from [0,1] to represent 3d folds (which is compatible in the .FOLD format, the problem is that people can't really do that yet so training data would be hard)
                 vector[int(0.5*i*(i-1) + j)][0] = 1
-    print(sum(vector))
-    # print(vector.T.tolist())
+            elif connection_matrix[i][j][2]:
+                vector[int(0.5*i*(i-1) + j)][0] = -1
     return vector
-fold2vector('trainingData/bp_turtle.fold')
 
+#if more training data is necessary, you can reuse the existing data by reflecting/rotating/flipping mv for more variations.
+
+# fold2matrix('trainingData/empty.fold')
+# fold2matrix('trainingData/225bird_base.fold')
+# fold2matrix('trainingData/225bird_frog_base.fold')
+# fold2matrix('trainingData/225blintzed_bird_base.fold')
+# fold2matrix('trainingData/225dragon.fold')
+# fold2matrix('trainingData/225deerf.fold')
+# fold2matrix('trainingData/225deerm.fold')
+# fold2matrix('trainingData/bp_turtle.fold')
+
+def vector2fold(vector,filename = None):
+    """
+    Take a vector and convert it into a .fold file (json object). If fold is true, save the file as a .fold file.
+    """
+    vertices_coords = []
+    for i in range(n**2):
+        vertices_coords.append([i//n,i%n])
+    edges_vertices = []
+    edges_assignment = []
+    for i in range(n**2):
+        for j in range(i):
+            if vector[int(0.5*i*(i-1) + j)][0] >0.5:
+                edges_vertices.append([i,j])
+                edges_assignment.append('M')
+            elif vector[int(0.5*i*(i-1) + j)][0] <-0.5:
+                edges_vertices.append([i,j])
+                edges_assignment.append('V')
+    data = {'vertices_coords':vertices_coords,'edges_vertices':edges_vertices,'edges_assignment':edges_assignment}
+    #save data as a json file
+    if filename:
+        with open(filename, 'w') as f:
+            json.dump(data, f)
+    return data
+
+# vector2fold(fold2vector('trainingData/bp_turtle.fold'),'outputs/bp_turtle.fold')
+# random = np.zeros((int(0.5*(n**2)*(n**2-1)),1))
+# for i in range(len(random)):
+#     if np.random.rand() > 0.999:
+#         if np.random.rand() >= 0.25:
+#             random[i][0] = 1
+#         else:
+#             random[i][0] = -1
+# vector2fold(random,'outputs/random.fold')
+
+def fold2readable(fold,filename):
+    """
+    Convert a fold json object into a readable image
+    """
+    image_size = 1080
+    scale = image_size/(n-1)
+    im = Image.new('RGB', (image_size, image_size),(255,255,255))
+    draw = ImageDraw.Draw(im)
+    for i in range(len(fold['edges_vertices'])):
+        v1 = fold['vertices_coords'][fold['edges_vertices'][i][0]]
+        v2 = fold['vertices_coords'][fold['edges_vertices'][i][1]]
+        if fold['edges_assignment'][i] == 'M':
+            draw.line((v1[0]*scale,v1[1]*scale,v2[0]*scale,v2[1]*scale), fill=(255,0,0),width=2)
+        elif fold['edges_assignment'][i] == 'V':
+            draw.line((v1[0]*scale,v1[1]*scale,v2[0]*scale,v2[1]*scale), fill=(0,0,255),width=2)
+
+    im.save(filename)
+fold2readable(vector2fold(fold2vector('trainingData/bp_turtle.fold')), 'outputs/bp_turtle.png')
+fold2readable(vector2fold(fold2vector('trainingData/225dragon.fold')), 'outputs/225dragon.png')
+    
