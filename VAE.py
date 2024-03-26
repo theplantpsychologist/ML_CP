@@ -50,7 +50,7 @@ class VAE(nn.Module):
 # Set the dimensions
 n = 17
 input_dim = int(0.5*(n**2)*(n**2-1))
-latent_dim = 8
+latent_dim = 4
 
 # Create the VAE model
 model = VAE(input_dim, latent_dim)
@@ -72,23 +72,13 @@ for file in file_list:
 
 train_data = torch.from_numpy(np.concatenate(data_list, axis=1).T).float()
 
-# # Load the training data
-# bird_base = vec.vectorize('trainingData/225bird_base.fold')
-# bird_frog = vec.vectorize('trainingData/225bird_frog_base.fold')
-# blintzed_bird = vec.vectorize('trainingData/225blintzed_bird_base.fold')
-# deerf = vec.vectorize('trainingData/225deerf.fold')
-# deerm = vec.vectorize('trainingData/225deerm.fold')
-# dragon = vec.vectorize('trainingData/225dragon.fold')
-# # empty = vec.vectorize('trainingData/empty.fold')
-
-# train_data = torch.from_numpy(np.concatenate((bird_base,bird_frog,blintzed_bird,deerf,deerm,dragon),axis=1).T).float()
 print(train_data.shape)
 
 
 # Define the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 # Set the number of epochs
-num_epochs = 70
+num_epochs = 50
 # Set the batch size
 batch_size = 128
 # Create a data loader
@@ -130,26 +120,31 @@ def generate_output(model, latent_dim,scale):
     return output
 
 output00 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output00/max(output00),0.05),"test00.png")
+vec.fold2readable(vec.vector2fold(output00/max(output00),0.15),"test00.png")
 
 output0 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output0/max(output0),0.1),"test0.png")
+vec.fold2readable(vec.vector2fold(output0/max(output0),0.14),"test0.png")
 
 output1 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output1/max(output1),0.2),"test1.png")
+vec.fold2readable(vec.vector2fold(output1/max(output1),0.09),"test1.png")
 
 output2 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output2/max(output2),0.3),"test2.png")
+vec.fold2readable(vec.vector2fold(output2/max(output2),0.1),"test2.png")
 
 output3 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output3/max(output3),0.4),"test3.png")
+vec.fold2readable(vec.vector2fold(output3/max(output3),0.11),"test3.png")
 
 output4 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output4/max(output4),0.5),"test4.png")
+vec.fold2readable(vec.vector2fold(output4/max(output4),0.12),"test4.png")
 
 output5 = generate_output(model, latent_dim,1).detach().numpy().T
-vec.fold2readable(vec.vector2fold(output4/max(output5),0.6),"test5.png")
+vec.fold2readable(vec.vector2fold(output4/max(output5),0.13),"test5.png")
+
+dragon = torch.from_numpy(vec.fold2vector("trainingData/225dragon.fold").T).float()
+print(model.encoder(dragon))
+output_dragon = model(dragon)[0].detach().numpy().T
+vec.fold2readable(vec.vector2fold(output_dragon/max(output_dragon),0.1),"dragon.png")
+print(max(output_dragon))
 
 print("=======finished=======")
 
-#TODO: figure out how to set up NLL loss
